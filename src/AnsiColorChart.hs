@@ -10,11 +10,11 @@ import Numeric
 parse :: String -> Color
 parse [r1, r2, g1, g2, b1, b2] = fromRgb $ Rgb (hex r) (hex g) (hex b)
     where
-	r = [r1, r2]
-	g = [g1, g2]
-	b = [b1, b2]
-	hex str = case readHex str of
-	    [(n, "")] -> n
+    r = [r1, r2]
+    g = [g1, g2]
+    b = [b1, b2]
+    hex str = case readHex str of
+        [(n, "")] -> n
 
 
 chart :: (Integral n) => [(n, Color)]
