@@ -3,7 +3,7 @@ module Rows (
     ) where
 
 
-import AnsiColor hiding (main)
+import AnsiColor
 import Color
 import Colors
 import Control.Monad
@@ -47,7 +47,7 @@ main = do
 	}
     interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
     where
-	st = mkColorState [mkGray 50, mkGray 5] -- $ squash $ cycle fullRainbow
+	st = mkColorState {-#[mkGray 50, mkGray 5]#-} $ squash $ cycle fullRainbow
 
 
 readColumns :: IO Int

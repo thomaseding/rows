@@ -1,8 +1,13 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ViewPatterns #-}
+
 module AnsiColor (
-      Layer(..)
+      ColorCode
+    , Layer(..)
+    , AnsiColor
     , availableColors
     , colorize
-    , main
+    , uncolorize
     ) where
 
 
@@ -12,6 +17,7 @@ import Data.Char
 import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe
 import Data.Metric
 import Data.Ord
 import Data.Word
@@ -20,6 +26,12 @@ import System.Environment
 
 
 type ColorCode = Word8
+
+
+data AnsiColor = AnsiColor {
+      acColorCode :: ColorCode
+    , acLayer :: Layer
+    }
 
 
 colorToAnsi :: Map Color ColorCode
@@ -31,7 +43,7 @@ availableColors = nub $ sortBy (comparing toRgb) $ map snd $ chart
 
 
 class ToAnsiColorCode a where
-    toAnsiColorCode :: a -> String
+    toAnsiColorCode :: a -> ColorCode
 
 
 instance ToAnsiColorCode Color where
@@ -39,18 +51,18 @@ instance ToAnsiColorCode Color where
 
 
 instance ToAnsiColorCode Rgb where
-    toAnsiColorCode rgb = toAnsiColorCode index
+    toAnsiColorCode rgb = code
 	where
-	    Just index = Map.lookup color colorToAnsi
+	    Just code = Map.lookup color colorToAnsi
 	    color = fromRgb $ closest (map toRgb availableColors) rgb
+
+
+instance ToAnsiColorCode ColorCode where
+    toAnsiColorCode = id
 
 
 instance Metric Rgb where
     dist (Rgb r1 g1 b1) (Rgb r2 g2 b2) = dist r1 r2 + dist g1 g2 + dist b1 b2
-
-
-instance ToAnsiColorCode Word8 where
-    toAnsiColorCode = show
 
 
 data Layer = Foreground | Background
@@ -61,38 +73,30 @@ colorize :: (ToAnsiColorCode a) => Layer -> a -> String -> String
 colorize layer color str = "\ESC[" ++ fullCode ++ "m" ++ str ++ "\ESC[0m"
     where
 	fullCode = layerCode ++ ";5;" ++ colorCode
-	colorCode = toAnsiColorCode color
+	colorCode = show $ toAnsiColorCode color
 	layerCode = case layer of
 	    Foreground -> "38"
 	    Background -> "48"
 
 
-tryRead :: (Read a) => String -> Maybe a
-tryRead str = case reads str of
-    [(x, "")] -> Just x
-    _ -> Nothing
+reads1 :: (Read a) => String -> Maybe (a, String)
+reads1 = listToMaybe . reads
 
 
-tryReadWord8 :: String -> Maybe Word8
-tryReadWord8 str = case tryRead str of
-    Nothing -> Nothing
-    Just n -> if 0 <= n && n < 256
-	then Just $ fromInteger n
-	else Nothing
+stripColorHeader :: String -> Maybe (AnsiColor, String)
+stripColorHeader (stripPrefix "\ESC[38;5;" -> Just str) = Just $ stripColorHeader' Foreground str
+stripColorHeader (stripPrefix "\ESC[48;5;" -> Just str) = Just $ stripColorHeader' Background str
+stripColorHeader _ = Nothing
 
 
-main :: IO ()
-main = do
-    [arg0, arg1, arg3] <- getArgs
-    layer <- case arg0 of
-	"fg" -> return Foreground
-	"bg" -> return Background
-    case tryReadWord8 arg1 of
-	Just code256 -> putStrLn $ colorize layer code256 arg3
+stripColorHeader' :: Layer -> String -> (AnsiColor, String)
+stripColorHeader' layer str = case reads1 str of
+    Just (code, 'm':rest) -> (AnsiColor code layer, rest)
 
 
-uncolorize :: String -> [(String, Maybe Word8)]
-uncolorize = undefined
+uncolorize :: String -> [(String, Maybe ColorCode)]
+uncolorize (stripPrefix "\ESC[38;5;" -> Just str) = undefined
+uncolorize (stripPrefix "\ESC[48;5;" -> Just str) = undefined
 
 
 
