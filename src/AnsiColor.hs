@@ -52,9 +52,9 @@ instance ToAnsiColorCode Color where
 
 instance ToAnsiColorCode Rgb where
     toAnsiColorCode rgb = code
-    where
-        Just code = Map.lookup color colorToAnsi
-        color = fromRgb $ closest (map toRgb availableColors) rgb
+        where
+            Just code = Map.lookup color colorToAnsi
+            color = fromRgb $ closest (map toRgb availableColors) rgb
 
 
 instance ToAnsiColorCode ColorCode where
@@ -72,11 +72,11 @@ data Layer = Foreground | Background
 colorize :: (ToAnsiColorCode a) => Layer -> a -> String -> String
 colorize layer color str = "\ESC[" ++ fullCode ++ "m" ++ str ++ "\ESC[0m"
     where
-    fullCode = layerCode ++ ";5;" ++ colorCode
-    colorCode = show $ toAnsiColorCode color
-    layerCode = case layer of
-        Foreground -> "38"
-        Background -> "48"
+        fullCode = layerCode ++ ";5;" ++ colorCode
+        colorCode = show $ toAnsiColorCode color
+        layerCode = case layer of
+            Foreground -> "38"
+            Background -> "48"
 
 
 reads1 :: (Read a) => String -> Maybe (a, String)
