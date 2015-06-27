@@ -17,5 +17,5 @@ cabal-version:       >=1.8
 executable rows
   main-is:             Main.hs
   other-modules:       AnsiColorChart, AnsiColor, Color, Colors, Rows
-  build-depends:       base ==4.5.*, monadlist ==0.0.*, mtl ==2.1.*, containers ==0.4.*, metric ==0.1.*, interpolate ==0.1.*
+  build-depends:       base >=4, monadlist ==0.0.*, mtl ==2.1.*, containers ==0.4.*, metric ==0.1.*, interpolate ==0.1.*
   hs-source-dirs:      src
