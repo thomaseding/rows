@@ -1,6 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Rows (
-      main
-    ) where
+    main,
+) where
 
 
 import AnsiColor
@@ -13,6 +15,7 @@ import qualified Control.Monad.State.Strict as S
 import Data.Char
 import Data.List
 import Data.Metric
+import Data.Proxy
 import Data.Word
 import System.Environment
 import System.Exit
@@ -47,7 +50,7 @@ main = do
     }
     interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
     where
-        st = mkColorState {-#[mkGray 50, mkGray 5]#-} $ squash $ cycle fullRainbow
+        st = mkColorState {- [mkGray 50, mkGray 5] -} $ squash $ cycle fullRainbow
 
 
 readColumns :: IO Int
@@ -69,7 +72,7 @@ fullRainbow = squash $ concat $ zipWith f rainbow $ tail $ cycle rainbow
     where
         denom = 255
         availableRgbs = map toRgb availableColors
-        f c1 c2 = squash $ map (fromRgb . closest availableRgbs . toRgb)  $ do
+        f c1 c2 = squash $ map (fromRgb . closest (Proxy :: Proxy Double) availableRgbs . toRgb)  $ do
             numer <- [0 .. denom]
             return $ interpolate c1 c2 $ numer / denom
 
@@ -83,6 +86,7 @@ squash (x:y:zs) = if x == y
 
 
 data ColorState = ColorState [Color]
+
 
 mkColorState :: [Color] -> ColorState
 mkColorState = ColorState . cycle
@@ -111,6 +115,7 @@ colorify opts str = do
 
 data EscapeStatus = Escaping | NotEscaping
 
+
 printables :: String -> String
 printables = id --flip S.evalState NotEscaping . filterM pred
     where
@@ -138,24 +143,5 @@ textWidth = flip S.execState 0 . mapM_ width
         width c = case c of
             '\t' -> S.gets ((tabWidth -) . (`mod` tabWidth)) >>= \n -> S.modify (+ n)
             _ -> S.modify (+ 1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -13,16 +13,14 @@ module AnsiColor (
 
 import AnsiColorChart
 import Color
-import Data.Char
 import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Metric
 import Data.Ord
+import Data.Proxy
 import Data.Word
-import Numeric
-import System.Environment
 
 
 type ColorCode = Word8
@@ -54,7 +52,7 @@ instance ToAnsiColorCode Rgb where
     toAnsiColorCode rgb = code
         where
             Just code = Map.lookup color colorToAnsi
-            color = fromRgb $ closest (map toRgb availableColors) rgb
+            color = fromRgb $ closest (Proxy :: Proxy Double) (map toRgb availableColors) rgb
 
 
 instance ToAnsiColorCode ColorCode where

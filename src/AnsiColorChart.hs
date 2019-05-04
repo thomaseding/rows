@@ -7,14 +7,20 @@ import Color
 import Numeric
 
 
+internalLogicError :: a
+internalLogicError = error "AnsiColorChart: Internal logic error."
+
+
 parse :: String -> Color
-parse [r1, r2, g1, g2, b1, b2] = fromRgb $ Rgb (hex r) (hex g) (hex b)
-    where
+parse [r1, r2, g1, g2, b1, b2] = let
     r = [r1, r2]
     g = [g1, g2]
     b = [b1, b2]
     hex str = case readHex str of
         [(n, "")] -> n
+        _ -> internalLogicError
+    in fromRgb $ Rgb (hex r) (hex g) (hex b)
+parse _ = internalLogicError
 
 
 chart :: (Integral n) => [(n, Color)]
