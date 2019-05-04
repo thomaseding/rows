@@ -3,14 +3,13 @@ module Color (
     Color,
     fromRgb,
     toRgb,
-    interpolate,
 ) where
 
 
-import Data.Function
-import Data.Interpolate
-import Data.Metric
-import Data.Word
+import Data.Function (on)
+import Data.Interpolate (Interpolate(interpolate))
+import Data.Metric (Metric(dist))
+import Data.Word (Word8)
 
 
 data Rgb = Rgb Word8 Word8 Word8

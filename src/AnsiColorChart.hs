@@ -1,12 +1,12 @@
 module AnsiColorChart (
     chart,
-    ColorCode
+    ColorCode,
 ) where
 
 
-import Color
-import Data.Word
-import Numeric
+import Color (Color, Rgb(Rgb), fromRgb)
+import Data.Word (Word8)
+import Numeric (readHex)
 
 
 internalLogicError :: a

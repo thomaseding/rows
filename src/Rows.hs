@@ -5,22 +5,23 @@ module Rows (
 ) where
 
 
-import AnsiColor
-import Color
-import Colors
-import Control.Monad
+import AnsiColor (Layer(Foreground, Background), availableColors, colorize)
+import Color (Color, Rgb(Rgb), fromRgb, toRgb)
+import Colors (rainbow)
+import Control.Monad ((<=<), filterM)
 import qualified Control.Monad.State.Lazy as L
 import qualified Control.Monad.State.Strict as S
-import Data.Char
-import Data.List
-import Data.Metric
-import Data.Proxy
+import Data.Char (isSpace, isPrint)
+import Data.Interpolate (interpolate)
+import Data.List (group)
+import Data.Metric (closest)
+import Data.Proxy (Proxy(Proxy))
 import qualified Data.Stream as Stream
 import Data.Stream (Stream(Cons))
-import Data.Word
-import System.Environment
-import System.Exit
-import System.IO
+import Data.Word (Word8)
+import System.Environment (getArgs, getEnv)
+import System.Exit (exitFailure)
+import System.IO (stdout, hSetBuffering, BufferMode(LineBuffering))
 
 
 mkGray :: Word8 -> Color
@@ -49,7 +50,12 @@ main = do
         optColumns = columns }
     interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
     where
-        st = mkColorState {- [mkGray 50, mkGray 5] -} $ squash $ cycle fullRainbow
+        useRainbow = True
+        rainbowColors = squash $ cycle fullRainbow
+        grayColors = [mkGray 50, mkGray 5]
+        st = mkColorState $ case useRainbow of
+            True -> rainbowColors
+            False -> grayColors
 
 
 readColumns :: IO Int
@@ -123,12 +129,6 @@ printables = const id $ flip S.evalState NotEscaping . filterM predicate
                 NotEscaping -> case c of
                     '\ESC' -> S.put Escaping >> return False
                     _ -> return $ or $ map ($ c) [isSpace, isPrint]
-
-
-modUp :: Integral a => a -> a -> a
-x `modUp` m = case x `mod` m of
-    0 -> m
-    y -> y
 
 
 textWidth :: String -> Int
