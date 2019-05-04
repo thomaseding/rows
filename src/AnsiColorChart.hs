@@ -1,9 +1,11 @@
 module AnsiColorChart (
-      chart
-    ) where
+    chart,
+    ColorCode
+) where
 
 
 import Color
+import Data.Word
 import Numeric
 
 
@@ -23,7 +25,10 @@ parse [r1, r2, g1, g2, b1, b2] = let
 parse _ = internalLogicError
 
 
-chart :: (Integral n) => [(n, Color)]
+type ColorCode = Word8
+
+
+chart :: [(ColorCode, Color)]
 chart = map (\(x, y) -> (x, parse y)) [
       (0, "000000")
     , (1, "800000")

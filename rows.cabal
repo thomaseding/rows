@@ -60,7 +60,7 @@ executable rows
   other-extensions:    FlexibleContexts, TypeSynonymInstances, ViewPatterns
 
   -- Other library packages from which modules are imported.
-  build-depends:       base ^>=4.12.0.0, monadlist ^>=0.0.2, mtl ^>=2.2.2, math-metric ^>=0.1.0.1, math-interpolate ^>=0.1.0.1, containers ^>=0.6.0.1
+  build-depends:       base ^>=4.12.0.0, monadlist ^>=0.0.2, mtl ^>=2.2.2, math-metric ^>=0.1.0.1, math-interpolate ^>=0.1.0.1, containers ^>=0.6.0.1, Stream ^>=0.4.7.2, dlist ^>=0.8.0.6
 
   -- Directories containing source files.
   hs-source-dirs:      src

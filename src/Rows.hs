@@ -9,13 +9,14 @@ import AnsiColor
 import Color
 import Colors
 import Control.Monad
-import Control.Monad.ListM
 import qualified Control.Monad.State.Lazy as L
 import qualified Control.Monad.State.Strict as S
 import Data.Char
 import Data.List
 import Data.Metric
 import Data.Proxy
+import qualified Data.Stream as Stream
+import Data.Stream (Stream(Cons))
 import Data.Word
 import System.Environment
 import System.Exit
@@ -27,10 +28,9 @@ mkGray n = fromRgb $ Rgb n n n
 
 
 data Options = Options {
-      optLayer :: Layer
-    , optPadBackgroundColor :: Bool
-    , optColumns :: Int
-    }
+    optLayer :: Layer,
+    optPadBackgroundColor :: Bool,
+    optColumns :: Int }
 
 
 main :: IO ()
@@ -44,10 +44,9 @@ main = do
     hSetBuffering stdout LineBuffering
     columns <- readColumns
     let opts = Options {
-          optLayer = layer
-        , optPadBackgroundColor = True
-        , optColumns = columns
-    }
+        optLayer = layer,
+        optPadBackgroundColor = True,
+        optColumns = columns }
     interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
     where
         st = mkColorState {- [mkGray 50, mkGray 5] -} $ squash $ cycle fullRainbow
@@ -78,22 +77,18 @@ fullRainbow = squash $ concat $ zipWith f rainbow $ tail $ cycle rainbow
 
 
 squash :: (Eq a) => [a] -> [a]
-squash [] = []
-squash [x] = [x]
-squash (x:y:zs) = if x == y
-    then squash $ y : zs
-    else x : squash (y:zs)
+squash = take 1 <=< group
 
 
-data ColorState = ColorState [Color]
+data ColorState = ColorState (Stream Color)
 
 
 mkColorState :: [Color] -> ColorState
-mkColorState = ColorState . cycle
+mkColorState = ColorState . Stream.cycle
 
 
 nextColor :: ColorState -> (ColorState, Color)
-nextColor (ColorState (c:cs)) = (ColorState cs, c)
+nextColor (ColorState (c `Cons` cs)) = (ColorState cs, c)
 
 
 colorify :: Options -> String -> L.State ColorState String
@@ -117,9 +112,9 @@ data EscapeStatus = Escaping | NotEscaping
 
 
 printables :: String -> String
-printables = id --flip S.evalState NotEscaping . filterM pred
+printables = const id $ flip S.evalState NotEscaping . filterM predicate
     where
-        pred c = do
+        predicate c = do
             escStatus <- S.get
             case escStatus of
                 Escaping -> case c of

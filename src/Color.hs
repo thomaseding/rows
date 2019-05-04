@@ -1,14 +1,15 @@
 module Color (
-      Rgb(..)
-    , Color
-    , fromRgb
-    , toRgb
-    , interpolate
-    ) where
+    Rgb(..),
+    Color,
+    fromRgb,
+    toRgb,
+    interpolate,
+) where
 
 
 import Data.Function
 import Data.Interpolate
+import Data.Metric
 import Data.Word
 
 
@@ -25,6 +26,10 @@ instance Interpolate Rgb where
             b = interp b1 b2
 
 
+instance Metric Rgb where
+    dist (Rgb r1 g1 b1) (Rgb r2 g2 b2) = dist r1 r2 + dist g1 g2 + dist b1 b2
+
+
 newtype Color = Color Rgb
     deriving (Eq, Ord)
 
@@ -39,10 +44,5 @@ fromRgb = Color
 
 toRgb :: Color -> Rgb
 toRgb (Color rgb) = rgb
-
-
-
-
-
 
 
