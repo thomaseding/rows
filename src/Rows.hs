@@ -18,50 +18,10 @@ import Data.Metric (closest)
 import Data.Proxy (Proxy(Proxy))
 import qualified Data.Stream as Stream
 import Data.Stream (Stream(Cons))
-import Data.Word (Word8)
 import Rgb (Rgb(Rgb), fromRgb, toRgb)
-import System.Environment (getArgs, getEnv)
+import System.Environment (getArgs, lookupEnv)
 import System.Exit (exitFailure)
 import System.IO (stdout, hSetBuffering, BufferMode(LineBuffering))
-
-
-mkGray :: Word8 -> Color
-mkGray n = fromRgb $ Rgb n n n
-
-
-data Options = Options {
-    optLayer :: Layer,
-    optPadBackgroundColor :: Bool,
-    optColumns :: Int }
-
-
-tryRead :: (Read a) => String -> Maybe a
-tryRead str = case reads str of
-    [(x, "")] -> Just x
-    _ -> Nothing
-
-
-readColumns :: IO Int
-readColumns = do
-    colStr <- getEnv "COLUMNS"
-    return $ case tryRead colStr of
-        Just cols -> cols
-        Nothing -> 80
-
-
-parseOptions :: IO Options
-parseOptions = do
-    args <- getArgs
-    layer <- case args of
-        [] -> return Foreground
-        ["--fg"] -> return Foreground
-        ["--bg"] -> return Background
-        _ -> exitFailure
-    columns <- readColumns
-    return Options {
-        optLayer = layer,
-        optPadBackgroundColor = True,
-        optColumns = columns }
 
 
 data ColorState = ColorState (Stream Color)
@@ -134,17 +94,54 @@ colorify opts str = do
             else (cols - (lineLen `mod` cols)) `mod` cols
 
 
+data Options = Options {
+    optLayer :: Layer,
+    optPadBackgroundColor :: Bool,
+    optColumns :: Int }
+
+
+tryRead :: (Read a) => String -> Maybe a
+tryRead str = case reads str of
+    [(x, "")] -> Just x
+    _ -> Nothing
+
+
+readColumns :: IO Int
+readColumns = do
+    mColStr <- lookupEnv "COLUMNS"
+    return $ case tryRead $ maybe "" id mColStr of
+        Just cols -> cols
+        Nothing -> 80
+
+
+parseOptions :: IO Options
+parseOptions = do
+    args <- getArgs
+    layer <- case args of
+        [] -> return Foreground
+        ["--fg"] -> return Foreground
+        ["--bg"] -> return Background
+        _ -> exitFailure
+    columns <- readColumns
+    return Options {
+        optLayer = layer,
+        optPadBackgroundColor = True,
+        optColumns = columns }
+
+
+processContent :: Options -> String -> String
+processContent opts = unlines . flip L.evalState st . mapM (colorify opts) . lines
+    where
+        grayColors = map fromRgb [Rgb 50 50 50, Rgb 5 5 5]
+        rainbowColors = squash $ cycle fullRainbow
+        st = mkColorState $ case True of
+            True -> rainbowColors
+            False -> grayColors
+
 main :: IO ()
 main = do
     hSetBuffering stdout LineBuffering
     opts <- parseOptions
-    interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
-    where
-        useRainbow = True
-        rainbowColors = squash $ cycle fullRainbow
-        grayColors = [mkGray 50, mkGray 5]
-        st = mkColorState $ case useRainbow of
-            True -> rainbowColors
-            False -> grayColors
+    interact $ processContent opts
 
 
