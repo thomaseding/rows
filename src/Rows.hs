@@ -116,6 +116,15 @@ readColumns = do
         Nothing -> 80
 
 
+defaultColorStream :: Stream Color
+defaultColorStream = let
+    grayColors = Stream.cycle $ map fromRgb [Rgb 50 50 50, Rgb 5 5 5]
+    rainbowColors = Stream.fromList $ squash $ cycle fullRainbow
+    in case True of
+        True -> rainbowColors
+        False -> grayColors
+
+
 parseOptions :: IO Options
 parseOptions = do
     args <- getArgs
@@ -125,16 +134,11 @@ parseOptions = do
         ["--bg"] -> return Background
         _ -> exitFailure
     columns <- readColumns
-    let grayColors = Stream.cycle $ map fromRgb [Rgb 50 50 50, Rgb 5 5 5]
-        rainbowColors = Stream.fromList $ squash $ cycle fullRainbow
-        colors = case True of
-            True -> rainbowColors
-            False -> grayColors
     return Options {
         optLayer = layer,
         optPadBackgroundColor = True,
         optColumns = columns,
-        optStartingColors = colors }
+        optStartingColors = defaultColorStream }
 
 
 processContent :: Options -> String -> String
@@ -142,6 +146,7 @@ processContent opts = unlines . flip L.evalState st . mapM f . lines
     where
         st = mkColorState $ optStartingColors opts
         f = colorify opts
+
 
 main :: IO ()
 main = do
