@@ -12,7 +12,7 @@ module AnsiColor (
 
 
 import AnsiColorChart (ColorCode, chart)
-import Color (Color, Rgb, fromRgb, toRgb)
+import Color (Color)
 import qualified Data.DList as DList
 import Data.DList (DList)
 import Data.List (nub, sortBy, stripPrefix)
@@ -21,6 +21,7 @@ import qualified Data.Map as Map
 import Data.Metric (closest)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy(Proxy))
+import Rgb (Rgb, fromRgb, toRgb)
 
 
 data AnsiColor = AnsiColor {

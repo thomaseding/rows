@@ -4,9 +4,10 @@ module AnsiColorChart (
 ) where
 
 
-import Color (Color, Rgb(Rgb), fromRgb)
+import Color (Color)
 import Data.Word (Word8)
 import Numeric (readHex)
+import Rgb (Rgb(Rgb), fromRgb)
 
 
 internalLogicError :: a

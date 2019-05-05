@@ -1,4 +1,4 @@
-module Colors (
+module Color.Names (
     white,
     black,
     red,
@@ -12,7 +12,8 @@ module Colors (
 ) where
 
 
-import Color (Color, Rgb(Rgb), fromRgb)
+import Color (Color)
+import Rgb (Rgb(Rgb), fromRgb)
 
 
 white :: Color

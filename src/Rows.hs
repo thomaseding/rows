@@ -6,8 +6,8 @@ module Rows (
 
 
 import AnsiColor (Layer(Foreground, Background), availableColors, colorize)
-import Color (Color, Rgb(Rgb), fromRgb, toRgb)
-import Colors (rainbow)
+import Color (Color)
+import Color.Names (rainbow)
 import Control.Monad ((<=<), filterM)
 import qualified Control.Monad.State.Lazy as L
 import qualified Control.Monad.State.Strict as S
@@ -19,6 +19,7 @@ import Data.Proxy (Proxy(Proxy))
 import qualified Data.Stream as Stream
 import Data.Stream (Stream(Cons))
 import Data.Word (Word8)
+import Rgb (Rgb(Rgb), fromRgb, toRgb)
 import System.Environment (getArgs, getEnv)
 import System.Exit (exitFailure)
 import System.IO (stdout, hSetBuffering, BufferMode(LineBuffering))
@@ -34,28 +35,10 @@ data Options = Options {
     optColumns :: Int }
 
 
-main :: IO ()
-main = do
-    args <- getArgs
-    layer <- case args of
-        [] -> return Foreground
-        ["--fg"] -> return Foreground
-        ["--bg"] -> return Background
-        _ -> exitFailure
-    hSetBuffering stdout LineBuffering
-    columns <- readColumns
-    let opts = Options {
-        optLayer = layer,
-        optPadBackgroundColor = True,
-        optColumns = columns }
-    interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
-    where
-        useRainbow = True
-        rainbowColors = squash $ cycle fullRainbow
-        grayColors = [mkGray 50, mkGray 5]
-        st = mkColorState $ case useRainbow of
-            True -> rainbowColors
-            False -> grayColors
+tryRead :: (Read a) => String -> Maybe a
+tryRead str = case reads str of
+    [(x, "")] -> Just x
+    _ -> Nothing
 
 
 readColumns :: IO Int
@@ -66,10 +49,34 @@ readColumns = do
         Nothing -> 80
 
 
-tryRead :: (Read a) => String -> Maybe a
-tryRead str = case reads str of
-    [(x, "")] -> Just x
-    _ -> Nothing
+parseOptions :: IO Options
+parseOptions = do
+    args <- getArgs
+    layer <- case args of
+        [] -> return Foreground
+        ["--fg"] -> return Foreground
+        ["--bg"] -> return Background
+        _ -> exitFailure
+    columns <- readColumns
+    return Options {
+        optLayer = layer,
+        optPadBackgroundColor = True,
+        optColumns = columns }
+
+
+data ColorState = ColorState (Stream Color)
+
+
+mkColorState :: [Color] -> ColorState
+mkColorState = ColorState . Stream.cycle
+
+
+nextColor :: ColorState -> (ColorState, Color)
+nextColor (ColorState (c `Cons` cs)) = (ColorState cs, c)
+
+
+squash :: (Eq a) => [a] -> [a]
+squash = take 1 <=< group
 
 
 fullRainbow :: [Color]
@@ -82,19 +89,32 @@ fullRainbow = squash $ concat $ zipWith f rainbow $ tail $ cycle rainbow
             return $ interpolate c1 c2 $ numer / denom
 
 
-squash :: (Eq a) => [a] -> [a]
-squash = take 1 <=< group
+data EscapeStatus
+    = Escaping
+    | NotEscaping
 
 
-data ColorState = ColorState (Stream Color)
+printables :: String -> String
+printables = const id $ flip S.evalState NotEscaping . filterM p
+    where
+        p c = do
+            escStatus <- S.get
+            case escStatus of
+                Escaping -> case c of
+                    'm' -> S.put NotEscaping >> return False
+                    _ -> return False
+                NotEscaping -> case c of
+                    '\ESC' -> S.put Escaping >> return False
+                    _ -> return $ or $ map ($ c) [isSpace, isPrint]
 
 
-mkColorState :: [Color] -> ColorState
-mkColorState = ColorState . Stream.cycle
-
-
-nextColor :: ColorState -> (ColorState, Color)
-nextColor (ColorState (c `Cons` cs)) = (ColorState cs, c)
+textWidth :: String -> Int
+textWidth = flip S.execState 0 . mapM_ width
+    where
+        tabWidth = 8
+        width c = case c of
+            '\t' -> S.gets ((tabWidth -) . (`mod` tabWidth)) >>= \n -> S.modify (+ n)
+            _ -> S.modify (+ 1)
 
 
 colorify :: Options -> String -> L.State ColorState String
@@ -114,29 +134,17 @@ colorify opts str = do
             else (cols - (lineLen `mod` cols)) `mod` cols
 
 
-data EscapeStatus = Escaping | NotEscaping
-
-
-printables :: String -> String
-printables = const id $ flip S.evalState NotEscaping . filterM predicate
+main :: IO ()
+main = do
+    hSetBuffering stdout LineBuffering
+    opts <- parseOptions
+    interact $ unlines . flip L.evalState st . mapM (colorify opts) . lines
     where
-        predicate c = do
-            escStatus <- S.get
-            case escStatus of
-                Escaping -> case c of
-                    'm' -> S.put NotEscaping >> return False
-                    _ -> return False
-                NotEscaping -> case c of
-                    '\ESC' -> S.put Escaping >> return False
-                    _ -> return $ or $ map ($ c) [isSpace, isPrint]
-
-
-textWidth :: String -> Int
-textWidth = flip S.execState 0 . mapM_ width
-    where
-        tabWidth = 8
-        width c = case c of
-            '\t' -> S.gets ((tabWidth -) . (`mod` tabWidth)) >>= \n -> S.modify (+ n)
-            _ -> S.modify (+ 1)
+        useRainbow = True
+        rainbowColors = squash $ cycle fullRainbow
+        grayColors = [mkGray 50, mkGray 5]
+        st = mkColorState $ case useRainbow of
+            True -> rainbowColors
+            False -> grayColors
 
 
