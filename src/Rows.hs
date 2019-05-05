@@ -27,8 +27,8 @@ import System.IO (stdout, hSetBuffering, BufferMode(LineBuffering))
 data ColorState = ColorState (Stream Color)
 
 
-mkColorState :: [Color] -> ColorState
-mkColorState = ColorState . Stream.cycle
+mkColorState :: Stream Color -> ColorState
+mkColorState = ColorState
 
 
 nextColor :: ColorState -> (ColorState, Color)
@@ -44,7 +44,8 @@ fullRainbow = squash $ concat $ zipWith f rainbow $ tail $ cycle rainbow
     where
         denom = 255
         availableRgbs = map toRgb availableColors
-        f c1 c2 = squash $ map (fromRgb . closest (Proxy :: Proxy Double) availableRgbs . toRgb)  $ do
+        closest' = closest (Proxy :: Proxy Double) availableRgbs
+        f c1 c2 = squash $ map (fromRgb . closest' . toRgb) $ do
             numer <- [0 .. denom]
             return $ interpolate c1 c2 $ numer / denom
 
@@ -97,7 +98,8 @@ colorify opts str = do
 data Options = Options {
     optLayer :: Layer,
     optPadBackgroundColor :: Bool,
-    optColumns :: Int }
+    optColumns :: Int,
+    optStartingColors :: Stream Color }
 
 
 tryRead :: (Read a) => String -> Maybe a
@@ -123,20 +125,23 @@ parseOptions = do
         ["--bg"] -> return Background
         _ -> exitFailure
     columns <- readColumns
+    let grayColors = Stream.cycle $ map fromRgb [Rgb 50 50 50, Rgb 5 5 5]
+        rainbowColors = Stream.fromList $ squash $ cycle fullRainbow
+        colors = case True of
+            True -> rainbowColors
+            False -> grayColors
     return Options {
         optLayer = layer,
         optPadBackgroundColor = True,
-        optColumns = columns }
+        optColumns = columns,
+        optStartingColors = colors }
 
 
 processContent :: Options -> String -> String
-processContent opts = unlines . flip L.evalState st . mapM (colorify opts) . lines
+processContent opts = unlines . flip L.evalState st . mapM f . lines
     where
-        grayColors = map fromRgb [Rgb 50 50 50, Rgb 5 5 5]
-        rainbowColors = squash $ cycle fullRainbow
-        st = mkColorState $ case True of
-            True -> rainbowColors
-            False -> grayColors
+        st = mkColorState $ optStartingColors opts
+        f = colorify opts
 
 main :: IO ()
 main = do
